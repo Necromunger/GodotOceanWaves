@@ -23,26 +23,55 @@ global uniform sampler2DArray normals : hint_normal; // Each layer represents on
 varying float wave_height;
 varying float foam_factor;
 varying float fresnel;
+varying vec3 v_world_pos;
+
+// --- Island falloff uniforms ---
+uniform int island_count : hint_range(0, 8) = 0;
+uniform vec3 island_centers[1];
+uniform float island_radii[1];
+uniform float island_falloff = 5.0;
+
+// --- Helper: Compute minimum blend for all islands, or 1.0 if none ---
+float get_island_falloff(vec2 pos) {
+    float min_blend = 1.0;
+    if (island_count < 1) {
+        return 1.0;
+    }
+
+    for (int i = 0; i < island_count; ++i) {
+        float dist = length(pos - island_centers[i].xz);
+        float blend = smoothstep(island_radii[i], island_radii[i] + island_falloff, dist);
+        min_blend = min(min_blend, blend);
+    }
+    return min_blend;
+}
 
 void vertex() {
-	UV = VERTEX.xz;
-	float distance_factor = min(exp(-(length(VERTEX.xz - CAMERA_POSITION_WORLD.xz) - 150.0)*0.007), 1.0); // Displacement amonut falls off after 150m.
+    UV = VERTEX.xz;
+    float distance_factor = min(exp(-(length(VERTEX.xz - CAMERA_POSITION_WORLD.xz) - 150.0)*0.007), 1.0);
 
-	// Read displacements from displacement maps.
-	vec3 displacement = vec3(0);
-	for (uint i = 0U; i < num_cascades; ++i) {
-		vec4 scales = map_scales[i];
-		displacement += texture(displacements, vec3(UV*scales.xy, float(i))).xyz * scales.z;
-	}
-	VERTEX += displacement * distance_factor;
-	wave_height = displacement.y;
+    // Convert to world space for island falloff
+    vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    v_world_pos = world_pos;
+    float island_blend = get_island_falloff(world_pos.xz);
+
+    // Read displacements from displacement maps.
+    vec3 displacement = vec3(0);
+    for (uint i = 0U; i < num_cascades; ++i) {
+        vec4 scales = map_scales[i];
+        displacement += texture(displacements, vec3(UV*scales.xy, float(i))).xyz * scales.z;
+    }
+    displacement *= island_blend;
+
+    VERTEX += displacement * distance_factor;
+    wave_height = displacement.y;
 }
 
 /** Filter weights for a cubic B-spline. */
 vec4 cubic_weights(float a) {
 	float a2 = a*a;
 	float a3 = a2*a;
-	
+
 	float w0 =-a3     + a2*3.0 - a*3.0 + 1.0;
 	float w1 = a3*3.0 - a2*6.0         + 4.0;
 	float w2 =-a3*3.0 + a2*3.0 + a*3.0 + 1.0;
@@ -56,7 +85,7 @@ vec4 texture_bicubic(in sampler2DArray sampler, in vec3 uvw) {
 	vec2 dims = vec2(textureSize(sampler, 0).xy);
 	vec2 dims_inv = 1.0 / dims;
 	uvw.xy = uvw.xy*dims + 0.5;
-	
+
 	vec2 fuv = fract(uvw.xy);
 	vec4 wx = cubic_weights(fuv.x);
 	vec4 wy = cubic_weights(fuv.y);
@@ -66,31 +95,35 @@ vec4 texture_bicubic(in sampler2DArray sampler, in vec3 uvw) {
 	vec2 w = g.xz / (g.xz + g.yw);
     return mix(
 		mix(texture(sampler, vec3(h.yw, uvw.z)), texture(sampler, vec3(h.xw, uvw.z)), w.x),
-		mix(texture(sampler, vec3(h.yz, uvw.z)), texture(sampler, vec3(h.xz, uvw.z)), w.x), w.y); 
+		mix(texture(sampler, vec3(h.yz, uvw.z)), texture(sampler, vec3(h.xz, uvw.z)), w.x), w.y);
 }
 
 void fragment() {
-	float map_size = float(textureSize(normals, 0).x);
-	float dist = length(VERTEX.xz);
-	// Read foam and normal information from normal maps.
-	vec3 gradient = vec3(0);
-	for (uint i = 0U; i < num_cascades; ++i) {
-		vec4 scales = map_scales[i];
-		vec3 coords = vec3(UV*scales.xy, float(i));
-		float ppm = map_size * min(scales.x, scales.y); // Pixels per meter
-		// Mix between bicubic and bilinear filtering depending on the world space pixels per meter.
-		// This is dependent on the tile size as well as displacement/normal map resolution.
-		gradient += mix(texture_bicubic(normals, coords), texture(normals, coords), min(1.0, ppm*0.1)).xyw * vec3(scales.ww, 1.0);
-	}
-		
-	foam_factor = smoothstep(0.0, 1.0, gradient.z*0.75) * exp(-dist*0.0075);
-	ALBEDO = mix(water_color.rgb, foam_color.rgb, foam_factor);
+    float map_size = float(textureSize(normals, 0).x);
+    float dist = length(VERTEX.xz);
 
-	gradient *= mix(0.015, normal_strength, exp(-dist*0.0175)); // Blend normal with terrain normal as distance increases.
-	NORMAL = (VIEW_MATRIX * vec4(normalize(vec3(-gradient.x, 1.0, -gradient.y)), 0.0)).xyz;
+    // Use interpolated world position from vertex shader
+    float island_blend = get_island_falloff(v_world_pos.xz);
 
-	fresnel = mix(pow(1.0 - dot(VIEW, NORMAL), 5.0*exp(-2.69*roughness)) / (1.0 + 22.7*pow(roughness, 1.5)), 1.0, REFLECTANCE);
-	ROUGHNESS = (1.0 - fresnel) * foam_factor + 0.4; // Roughness is proportional to foam/fog amount and fresnel.
+    // Read foam and normal information from normal maps.
+    vec3 gradient = vec3(0);
+    for (uint i = 0U; i < num_cascades; ++i) {
+        vec4 scales = map_scales[i];
+        vec3 coords = vec3(UV*scales.xy, float(i));
+        float ppm = map_size * min(scales.x, scales.y);
+        gradient += mix(texture_bicubic(normals, coords), texture(normals, coords), min(1.0, ppm*0.1)).xyw * vec3(scales.ww, 1.0);
+    }
+
+    gradient = mix(vec3(0.0, 0.0, 0.0), gradient, island_blend);
+
+    foam_factor = smoothstep(0.0, 1.0, gradient.z*0.75) * exp(-dist*0.0075);
+    ALBEDO = mix(water_color.rgb, foam_color.rgb, foam_factor);
+
+    gradient *= mix(0.015, normal_strength, exp(-dist*0.0175));
+    NORMAL = (VIEW_MATRIX * vec4(normalize(vec3(-gradient.x, 1.0, -gradient.y)), 0.0)).xyz;
+
+    fresnel = mix(pow(1.0 - dot(VIEW, NORMAL), 5.0*exp(-2.69*roughness)) / (1.0 + 22.7*pow(roughness, 1.5)), 1.0, REFLECTANCE);
+    ROUGHNESS = (1.0 - fresnel) * foam_factor + 0.4;
 }
 
 float smith_masking_shadowing(in float cos_theta, in float alpha) {
