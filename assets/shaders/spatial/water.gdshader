@@ -10,6 +10,7 @@ render_mode world_vertex_coords, shadows_disabled;
 
 global uniform vec4 water_color : source_color;
 global uniform vec4 foam_color : source_color;
+global uniform vec3 water_mesh_world_position = vec3(0.0, 0.0, 0.0);
 
 uniform float roughness : hint_range(0.0, 1.0) = 0.4;
 uniform float normal_strength : hint_range(0.0, 1.0) = 1.0; // Global normal strength
@@ -26,9 +27,9 @@ varying float fresnel;
 varying vec3 v_world_pos;
 
 // --- Island falloff uniforms ---
-uniform int island_count : hint_range(0, 8) = 0;
-uniform vec3 island_centers[1];
-uniform float island_radii[1];
+group_uniforms island_data;
+uniform int island_count = 0;
+uniform vec3 island_data[1]; // x = center.x, y = center.z, z = radius
 uniform float island_falloff = 5.0;
 
 // --- Helper: Compute minimum blend for all islands, or 1.0 if none ---
@@ -37,10 +38,11 @@ float get_island_falloff(vec2 pos) {
     if (island_count < 1) {
         return 1.0;
     }
-
     for (int i = 0; i < island_count; ++i) {
-        float dist = length(pos - island_centers[i].xz);
-        float blend = smoothstep(island_radii[i], island_radii[i] + island_falloff, dist);
+        vec2 center = island_data[i].xy;
+        float radius = island_data[i].z;
+        float dist = length(pos - center);
+        float blend = smoothstep(radius, radius + island_falloff, dist);
         min_blend = min(min_blend, blend);
     }
     return min_blend;
@@ -48,11 +50,13 @@ float get_island_falloff(vec2 pos) {
 
 void vertex() {
     UV = VERTEX.xz;
-    float distance_factor = min(exp(-(length(VERTEX.xz - CAMERA_POSITION_WORLD.xz) - 150.0)*0.007), 1.0);
 
-    // Convert to world space for island falloff
-    vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    // Convert to true world space for island falloff (MODEL_MATRIX already includes global transform)
+    vec3 world_pos = VERTEX;
     v_world_pos = world_pos;
+
+    // Add distance-based LOD for displacement
+    float distance_factor = min(exp(-(length(world_pos.xz - CAMERA_POSITION_WORLD.xz) - 150.0)*0.007), 1.0);
     float island_blend = get_island_falloff(world_pos.xz);
 
     // Read displacements from displacement maps.
@@ -61,9 +65,9 @@ void vertex() {
         vec4 scales = map_scales[i];
         displacement += texture(displacements, vec3(UV*scales.xy, float(i))).xyz * scales.z;
     }
-    displacement *= island_blend;
+    displacement *= island_blend * distance_factor;
 
-    VERTEX += displacement * distance_factor;
+    VERTEX += displacement;
     wave_height = displacement.y;
 }
 

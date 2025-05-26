@@ -79,6 +79,7 @@ func _process(delta : float) -> void:
 		var update_delta := delta if updates_per_second == 0 else target_update_delta + (time - next_update_time)
 		next_update_time = time + target_update_delta
 		_update_water(update_delta)
+	
 	time += delta
 
 func _setup_wave_generator() -> void:
@@ -112,6 +113,7 @@ func _update_scales_uniform() -> void:
 func _update_water(delta : float) -> void:
 	if wave_generator == null: _setup_wave_generator()
 	wave_generator.update(delta, parameters)
+	RenderingServer.global_shader_parameter_set(&'water_mesh_world_position', global_position)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:

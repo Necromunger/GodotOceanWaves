@@ -83,3 +83,7 @@ num_cascades={
 "type": "uint",
 "value": 0
 }
+water_mesh_world_position={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
