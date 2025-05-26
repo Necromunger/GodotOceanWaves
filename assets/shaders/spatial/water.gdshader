@@ -29,7 +29,7 @@ varying vec3 v_world_pos;
 // --- Island falloff uniforms ---
 group_uniforms island_data;
 uniform int island_count = 0;
-uniform vec3 island_data[1]; // x = center.x, y = center.z, z = radius
+uniform vec3 island_data[8]; // x = center.x, y = center.z, z = radius
 uniform float island_falloff = 5.0;
 
 // --- Helper: Compute minimum blend for all islands, or 1.0 if none ---
@@ -75,7 +75,6 @@ void vertex() {
 vec4 cubic_weights(float a) {
 	float a2 = a*a;
 	float a3 = a2*a;
-
 	float w0 =-a3     + a2*3.0 - a*3.0 + 1.0;
 	float w1 = a3*3.0 - a2*6.0         + 4.0;
 	float w2 =-a3*3.0 + a2*3.0 + a*3.0 + 1.0;
