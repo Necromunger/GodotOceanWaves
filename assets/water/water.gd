@@ -8,18 +8,18 @@ const SPRAY_MAT := preload('res://assets/water/mat_spray.tres')
 const WATER_MESH_HIGH := preload('res://assets/water/clipmap_high.obj')
 const WATER_MESH_LOW := preload('res://assets/water/clipmap_low.obj')
 
-enum MeshQuality { LOW, HIGH }
+enum MeshQuality {LOW, HIGH}
 
 @export_group('Wave Parameters')
-@export_color_no_alpha var water_color : Color = Color(0.1, 0.15, 0.18) :
+@export_color_no_alpha var water_color: Color = Color(0.1, 0.15, 0.18):
 	set(value): water_color = value; RenderingServer.global_shader_parameter_set(&'water_color', water_color.srgb_to_linear())
 
-@export_color_no_alpha var foam_color : Color = Color(0.73, 0.67, 0.62) :
+@export_color_no_alpha var foam_color: Color = Color(0.73, 0.67, 0.62):
 	set(value): foam_color = value; RenderingServer.global_shader_parameter_set(&'foam_color', foam_color.srgb_to_linear())
 
 ## The parameters for wave cascades. Each parameter set represents one cascade.
 ## Recreates all compute piplines whenever a cascade is added or removed!
-@export var parameters : Array[WaveCascadeParameters] :
+@export var parameters: Array[WaveCascadeParameters]:
 	set(value):
 		var new_size := len(value)
 		# All below logic is basically just required for using in the editor!
@@ -29,18 +29,18 @@ enum MeshQuality { LOW, HIGH }
 			if not value[i].is_connected(&'scale_changed', _update_scales_uniform):
 				value[i].scale_changed.connect(_update_scales_uniform)
 			value[i].spectrum_seed = Vector2i(rng.randi_range(-10000, 10000), rng.randi_range(-10000, 10000))
-			value[i].time = 120.0 + PI*i # We make sure to choose a time offset such that cascades don't interfere!
+			value[i].time = 120.0 + PI * i # We make sure to choose a time offset such that cascades don't interfere!
 		parameters = value
 		_setup_wave_generator()
 		_update_scales_uniform()
 
 @export_group('Performance Parameters')
-@export_enum('128x128:128', '256x256:256', '512x512:512', '1024x1024:1024') var map_size := 1024 :
+@export_enum('128x128:128', '256x256:256', '512x512:512', '1024x1024:1024') var map_size := 1024:
 	set(value):
 		map_size = value
 		_setup_wave_generator()
 
-@export var mesh_quality := MeshQuality.HIGH :
+@export var mesh_quality := MeshQuality.HIGH:
 	set(value):
 		mesh_quality = value
 		mesh = WATER_MESH_HIGH if mesh_quality == MeshQuality.HIGH else WATER_MESH_LOW
@@ -48,12 +48,22 @@ enum MeshQuality { LOW, HIGH }
 ## How many times the wave simulation should update per second.
 ## Note: This doesn't reduce the frame stutter caused by FFT calculation, only
 ##       minimizes GPU time taken by it!
-@export_range(0, 60) var updates_per_second := 50.0 :
+@export_range(0, 60) var updates_per_second := 50.0:
 	set(value):
-		next_update_time = next_update_time - (1.0/(updates_per_second + 1e-10) - 1.0/(value + 1e-10))
+		next_update_time = next_update_time - (1.0 / (updates_per_second + 1e-10) - 1.0 / (value + 1e-10))
 		updates_per_second = value
 
-var wave_generator : WaveGenerator :
+@export_group('Island Parameters')
+
+@export var islands: Array[Vector4] = []:
+	set(value):
+		islands = value
+		WATER_MAT.set_shader_parameter(&'island_count', value.size())
+		WATER_MAT.set_shader_parameter(&'island_data', value)
+		SPRAY_MAT.set_shader_parameter(&'island_count', value.size())
+		SPRAY_MAT.set_shader_parameter(&'island_data', value)
+
+var wave_generator: WaveGenerator:
 	set(value):
 		if wave_generator: wave_generator.queue_free()
 		wave_generator = value
@@ -72,7 +82,7 @@ func _ready() -> void:
 	RenderingServer.global_shader_parameter_set(&'water_color', water_color.srgb_to_linear())
 	RenderingServer.global_shader_parameter_set(&'foam_color', foam_color.srgb_to_linear())
 
-func _process(delta : float) -> void:
+func _process(delta: float) -> void:
 	# Update waves once every 1.0/updates_per_second.
 	if updates_per_second == 0 or time >= next_update_time:
 		var target_update_delta := 1.0 / (updates_per_second + 1e-10)
@@ -101,7 +111,7 @@ func _setup_wave_generator() -> void:
 	RenderingServer.global_shader_parameter_set(&'normals', normal_maps)
 
 func _update_scales_uniform() -> void:
-	var map_scales : PackedVector4Array; map_scales.resize(len(parameters))
+	var map_scales: PackedVector4Array; map_scales.resize(len(parameters))
 	for i in len(parameters):
 		var params := parameters[i]
 		var uv_scale := Vector2.ONE / params.tile_length
@@ -110,10 +120,9 @@ func _update_scales_uniform() -> void:
 	WATER_MAT.set_shader_parameter(&'map_scales', map_scales)
 	SPRAY_MAT.set_shader_parameter(&'map_scales', map_scales)
 
-func _update_water(delta : float) -> void:
+func _update_water(delta: float) -> void:
 	if wave_generator == null: _setup_wave_generator()
 	wave_generator.update(delta, parameters)
-	RenderingServer.global_shader_parameter_set(&'water_mesh_world_position', global_position)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
