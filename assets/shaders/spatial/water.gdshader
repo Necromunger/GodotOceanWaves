@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode world_vertex_coords, shadows_disabled;
+
 /**
  * Water lighting model roughly follows the 2019 GDC talk: "Wakes, Explosions and Lighting: Interactive Water Simulation in Atlas".
  * Source: https://gpuopen.com/gdc-presentations/2019/gdc-2019-agtd6-interactive-water-simulation-in-atlas.pdf
@@ -20,31 +21,31 @@ uniform vec4 map_scales[MAX_CASCADES];               // Scales for displacement/
 global uniform uint num_cascades;
 global uniform sampler2DArray displacements;         // Each layer represents one wave cascade.
 global uniform sampler2DArray normals : hint_normal; // Each layer represents one wave cascade.
-
 varying float wave_height;
 varying float foam_factor;
 varying float fresnel;
 varying vec3 v_world_pos;
 
-// --- Island falloff uniforms ---
-group_uniforms island_data;
+// Island falloff uniforms
+group_uniforms islands;
 uniform int island_count = 0;
-uniform vec3 island_data[8]; // x = center.x, y = center.z, z = radius
-uniform float island_falloff = 5.0;
+uniform vec4 island_data[16];
 
-// --- Helper: Compute minimum blend for all islands, or 1.0 if none ---
-float get_island_falloff(vec2 pos) {
-    float min_blend = 1.0;
-    if (island_count < 1) {
+// Compute minimum blend for all islands
+float get_island_blend(vec2 pos) {
+    if (island_count < 1)
         return 1.0;
-    }
+	
+    float min_blend = 1.0;
     for (int i = 0; i < island_count; ++i) {
         vec2 center = island_data[i].xy;
         float radius = island_data[i].z;
+        float falloff = island_data[i].w;
         float dist = length(pos - center);
-        float blend = smoothstep(radius, radius + island_falloff, dist);
+        float blend = smoothstep(radius, radius + falloff, dist);
         min_blend = min(min_blend, blend);
     }
+	
     return min_blend;
 }
 
@@ -57,7 +58,7 @@ void vertex() {
 
     // Add distance-based LOD for displacement
     float distance_factor = min(exp(-(length(world_pos.xz - CAMERA_POSITION_WORLD.xz) - 150.0)*0.007), 1.0);
-    float island_blend = get_island_falloff(world_pos.xz);
+    float island_blend = get_island_blend(world_pos.xz);
 
     // Read displacements from displacement maps.
     vec3 displacement = vec3(0);
@@ -106,7 +107,7 @@ void fragment() {
     float dist = length(VERTEX.xz);
 
     // Use interpolated world position from vertex shader
-    float island_blend = get_island_falloff(v_world_pos.xz);
+    float island_blend = get_island_blend(v_world_pos.xz);
 
     // Read foam and normal information from normal maps.
     vec3 gradient = vec3(0);
