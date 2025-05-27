@@ -1,3 +1,4 @@
+// Returns blend factor easing to 0 based on the distance to the nearest island
 float get_island_blend(vec2 pos, int count, vec4[16] islands) {
     if (count < 1)
         return 1.0;

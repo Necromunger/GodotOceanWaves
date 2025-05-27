@@ -1,5 +1,8 @@
 shader_type particles;
 render_mode disable_velocity;
+
+#include "./islands.gdshaderinc"
+
 /**
  * Handles where sea spray particles should spawn and determines their animation.
  */
@@ -26,6 +29,11 @@ uniform vec4 map_scales[MAX_CASCADES];               // Scales for displacement/
 global uniform uint num_cascades;
 global uniform sampler2DArray displacements;         // Each layer represents one wave cascade.
 global uniform sampler2DArray normals : hint_normal; // Each layer represents one wave cascade.
+
+// Island falloff uniforms
+group_uniforms islands;
+uniform int island_count = 0;
+uniform vec4 island_data[16];
 
 // Source: https://www.shadertoy.com/view/Xt3cDn
 vec3 hash32(uvec2 p) {
@@ -58,7 +66,13 @@ void start() {
 		START_POS = POSITION;
 		START_TIME = TIME + rand.z*(LIFETIME - PARTICLE_LIFETIME);
 
+		float island_blend = get_island_blend(START_POS.xz, island_count, island_data);
+		if (island_blend < 0.01) {
+			ACTIVE = false;
+		}
+
 		HAS_STARTED = 0.0;
+
 		POSITION = vec3(0,-1e10,0); // idk if this is needed.
 		set_scale(TRANSFORM, vec3(1e-3));
 		// Rest of initialization starts after the particle's start time has passed...

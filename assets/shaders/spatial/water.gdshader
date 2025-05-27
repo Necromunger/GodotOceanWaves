@@ -87,8 +87,6 @@ vec4 texture_bicubic(in sampler2DArray sampler, in vec3 uvw) {
 void fragment() {
     float map_size = float(textureSize(normals, 0).x);
     float dist = length(VERTEX.xz);
-
-    // Use interpolated world position from vertex shader
     float island_blend = get_island_blend(world_pos.xz, island_count, island_data);
 
     // Read foam and normal information from normal maps.

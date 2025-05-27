@@ -1,8 +1,5 @@
 shader_type spatial;
 render_mode cull_back, unshaded, shadows_disabled;
-
-#include "./islands.gdshaderinc"
-
 /**
  * Handles the opacity and billboarding for the sea spray mesh.
  * This is not a great shader since it doesn't apply any lighting to particles (I am too lazy).

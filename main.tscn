@@ -121,7 +121,7 @@ transform = Transform3D(-0.996195, -0.0151344, 0.0858316, 0, 0.984807, 0.173648,
 script = ExtResource("4_v2yip")
 
 [node name="Water" type="MeshInstance3D" parent="."]
-transform = Transform3D(2.395, 0, 0, 0, 2.395, 0, 0, 0, 2.395, -63, 0, 35)
+transform = Transform3D(2.395, 0, 0, 0, 2.395, 0, 0, 0, 2.395, 76, 0, 96)
 sorting_offset = 999.0
 material_override = ExtResource("5_lt75t")
 cast_shadow = 0
@@ -130,7 +130,7 @@ mesh = ExtResource("5_n61pp")
 skeleton = NodePath("")
 script = ExtResource("7_s0x5e")
 parameters = Array[ExtResource("2_pw5n6")]([SubResource("Resource_adqv5"), SubResource("Resource_luhq0"), SubResource("Resource_83u3u")])
-islands = Array[Vector4]([Vector4(50, 50, 38.09, 1)])
+islands = Array[Vector4]([Vector4(47.565, 54.43, 41.175, 11.835), Vector4(-34.6, -29.04, 12.97, 8.81)])
 
 [node name="WaterSprayEmitter" type="GPUParticles3D" parent="Water"]
 transform = Transform3D(15, 0, 0, 0, 15, 0, 0, 0, 15, 0, 0, 0)

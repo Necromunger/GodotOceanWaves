@@ -34,6 +34,15 @@ enum MeshQuality {LOW, HIGH}
 		_setup_wave_generator()
 		_update_scales_uniform()
 
+## Islands: xy = position, z = radius, w = falloff
+@export var islands: Array[Vector4] = []:
+	set(value):
+		islands = value
+		WATER_MAT.set_shader_parameter(&'island_count', value.size())
+		WATER_MAT.set_shader_parameter(&'island_data', value)
+		SPRAY_MAT.set_shader_parameter(&'island_count', value.size())
+		SPRAY_MAT.set_shader_parameter(&'island_data', value)
+
 @export_group('Performance Parameters')
 @export_enum('128x128:128', '256x256:256', '512x512:512', '1024x1024:1024') var map_size := 1024:
 	set(value):
@@ -52,16 +61,6 @@ enum MeshQuality {LOW, HIGH}
 	set(value):
 		next_update_time = next_update_time - (1.0 / (updates_per_second + 1e-10) - 1.0 / (value + 1e-10))
 		updates_per_second = value
-
-@export_group('Island Parameters')
-
-@export var islands: Array[Vector4] = []:
-	set(value):
-		islands = value
-		WATER_MAT.set_shader_parameter(&'island_count', value.size())
-		WATER_MAT.set_shader_parameter(&'island_data', value)
-		SPRAY_MAT.set_shader_parameter(&'island_count', value.size())
-		SPRAY_MAT.set_shader_parameter(&'island_data', value)
 
 var wave_generator: WaveGenerator:
 	set(value):
