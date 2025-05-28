@@ -1,7 +1,7 @@
 # GodotOceanWaves
 An open ocean rendering experiment in the Godot Engine utilizing the inverse Fourier transform of directional ocean-wave spectra for wave generation. A concise set of parameters is exposed, allowing for scriptable, real-time modification of wave properties to emulate a wide-variety of ocean-wave environments.
 
-[ocean_demo.mp4](https://github.com/user-attachments/assets/a8083878-a297-4536-a481-9123cea7e7df)
+[ocean_demo.mp4](https://github.com/user-attachments/addons/GodotOceanWaves/a8083878-a297-4536-a481-9123cea7e7df)
 
 ## Introduction
 ### Why Fourier Transforms?
@@ -28,7 +28,7 @@ Each sea spray particle uses a billboarded sprite with a single static texture. 
 
 One *major* drawback of this method is that a large increase in particle amount only results in a small increase in sea spray density. This is due to the equal distribution of particles along the bounding box, which results in a majority of the added particles being culled.
 
-![shading_demo](https://github.com/user-attachments/assets/c69766e7-711c-4909-a1fa-290bac0d577a)
+![shading_demo](https://github.com/user-attachments/addons/GodotOceanWaves/c69766e7-711c-4909-a1fa-290bac0d577a)
 
 ### Wave Simulation
 The method for generating surface waves closely follows Tessendorf. A directional ocean-wave spectrum function is multiplied with Gaussian-distributed random numbers to generate an initial spectral sea state. The initial state is then propagated in time through a "dispersion relation" (relating the frequency of waves and their propagation speed). An inverse Fourier transform can then be applied to the propagated state to generate displacement and normal maps.
@@ -86,7 +86,7 @@ An experiment to asynchronously compute cascade updates using Godot's local Rend
 
 The displacement, normal, and foam maps generated after running FFT on our directional ocean-wave spectrum function (along with its associated parameters) yield realistic surface motion across a broad range of ocean-wave environments.
 
-[environment_demo.mp4](https://github.com/user-attachments/assets/7589758f-1233-4be8-accc-2902a1dd01ec)
+[environment_demo.mp4](https://github.com/user-attachments/addons/GodotOceanWaves/7589758f-1233-4be8-accc-2902a1dd01ec)
 
 ## References
 **Flügge, Fynn-Jorin**. **[Realtime GPGPU FFT Ocean Water Simulation](https://tore.tuhh.de/entities/publication/1cd390d3-732b-41c1-aa2b-07b71a64edd2)**. Hamburg University of Technology. (2017).\
