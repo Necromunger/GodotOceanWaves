@@ -1,0 +1,47 @@
+[gd_scene load_steps=15 format=3 uid="uid://c832wspq6nh0e"]
+
+[ext_resource type="Material" uid="uid://byumtcccq4ew3" path="res://addons/GodotOceanWaves/water/mat_water.tres" id="1_47xwc"]
+[ext_resource type="ArrayMesh" uid="uid://ix4vp1y05f1s" path="res://addons/GodotOceanWaves/water/clipmap_high.obj" id="2_wrgos"]
+[ext_resource type="Script" uid="uid://rjnwlia565u3" path="res://addons/GodotOceanWaves/water/water.gd" id="3_0tewr"]
+[ext_resource type="Script" uid="uid://d1hmm5iy3xikw" path="res://addons/GodotOceanWaves/water/wave_cascade_parameters.gd" id="4_xpqgc"]
+[ext_resource type="Resource" uid="uid://bq8x4jpd125li" path="res://addons/GodotOceanWaves/resources/WaveCascade1.tres" id="5_okr4e"]
+[ext_resource type="Resource" uid="uid://bj8vs78oi5jr0" path="res://addons/GodotOceanWaves/resources/WaveCascad2.tres" id="6_x0t4i"]
+[ext_resource type="Resource" uid="uid://b61r2j0ttxxnc" path="res://addons/GodotOceanWaves/resources/WaveCascade3.tres" id="7_b2lg6"]
+[ext_resource type="Shader" uid="uid://2lq1rnbpqie1" path="res://addons/GodotOceanWaves/shaders/spatial/sea_spray.gdshader" id="8_3n6uw"]
+[ext_resource type="Texture2D" uid="uid://dtm5tyuh2slqt" path="res://addons/GodotOceanWaves/water/sea_spray.png" id="9_to3e0"]
+[ext_resource type="Material" uid="uid://5xqyddws6rt5" path="res://addons/GodotOceanWaves/water/mat_spray.tres" id="10_s0rd0"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_k6xhe"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_tsx6q"]
+seamless = true
+noise = SubResource("FastNoiseLite_k6xhe")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ds3o1"]
+render_priority = 0
+shader = ExtResource("8_3n6uw")
+shader_parameter/max_alpha = 0.666
+shader_parameter/albedo_texture = ExtResource("9_to3e0")
+shader_parameter/dissolve_texture = SubResource("NoiseTexture2D_tsx6q")
+
+[sub_resource type="QuadMesh" id="QuadMesh_06d3e"]
+
+[node name="Water" type="MeshInstance3D"]
+transform = Transform3D(2.395, 0, 0, 0, 2.395, 0, 0, 0, 2.395, 0, 0, 0)
+sorting_offset = 999.0
+material_override = ExtResource("1_47xwc")
+cast_shadow = 0
+extra_cull_margin = 1000.0
+mesh = ExtResource("2_wrgos")
+skeleton = NodePath("")
+script = ExtResource("3_0tewr")
+parameters = Array[ExtResource("4_xpqgc")]([ExtResource("5_okr4e"), ExtResource("6_x0t4i"), ExtResource("7_b2lg6")])
+
+[node name="WaterSprayEmitter" type="GPUParticles3D" parent="."]
+transform = Transform3D(15, 0, 0, 0, 15, 0, 0, 0, 15, 0, 0, 0)
+material_override = SubResource("ShaderMaterial_ds3o1")
+cast_shadow = 0
+amount = 150000
+lifetime = 6.0
+process_material = ExtResource("10_s0rd0")
+draw_pass_1 = SubResource("QuadMesh_06d3e")

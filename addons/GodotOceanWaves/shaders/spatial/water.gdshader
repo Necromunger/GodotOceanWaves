@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode world_vertex_coords, shadows_disabled;
+render_mode world_vertex_coords, shadows_disabled, cull_disabled;
 
 #include "./islands.gdshaderinc"
 
